@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "flamegraph-studio"
+version = "0.1.0"
+description = "Utilities for folded flame graph data"
+requires-python = ">=3.9"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project.scripts]
+flamegraph-studio = "flamegraph_studio.__main__:main"
+
