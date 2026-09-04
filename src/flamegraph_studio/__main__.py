@@ -17,10 +17,10 @@ def main() -> None:
         "stack_count": len(stacks.stacks),
         "total_weight": stacks.total_weight,
         "hottest_leaves": [asdict(item) for item in stacks.hottest_leaves(args.top)],
+        "hottest_frames": [asdict(item) for item in stacks.hottest_frames(args.top)],
     }
     print(json.dumps(payload, indent=2))
 
 
 if __name__ == "__main__":
     main()
-

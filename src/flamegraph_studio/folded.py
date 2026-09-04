@@ -27,6 +27,18 @@ class FoldedStacks:
         ranked = sorted(leaves.items(), key=lambda item: (-item[1], item[0]))
         return [HotFrame(frame, weight, weight / total) for frame, weight in ranked[:limit]]
 
+    def hottest_frames(self, limit: int = 10) -> list[HotFrame]:
+        """Rank frames by inclusive weight, counting a recursive frame once per stack."""
+        if limit < 1:
+            raise ValueError("limit must be positive")
+        inclusive: dict[str, int] = {}
+        for stack, weight in self.stacks.items():
+            for frame in set(stack):
+                inclusive[frame] = inclusive.get(frame, 0) + weight
+        total = self.total_weight
+        ranked = sorted(inclusive.items(), key=lambda item: (-item[1], item[0]))
+        return [HotFrame(frame, weight, weight / total) for frame, weight in ranked[:limit]]
+
 
 def parse_folded(lines: Iterable[str]) -> FoldedStacks:
     stacks: dict[tuple[str, ...], int] = {}
@@ -46,4 +58,3 @@ def parse_folded(lines: Iterable[str]) -> FoldedStacks:
     if not stacks:
         raise ValueError("at least one folded stack is required")
     return FoldedStacks(stacks)
-

@@ -23,6 +23,16 @@ class FoldedStackTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             parse_folded(["main 1"]).hottest_leaves(0)
 
+    def test_ranks_inclusive_frames_without_double_counting_recursion(self) -> None:
+        result = parse_folded(["main;parse;parse 20", "main;render 10"])
+        frames = result.hottest_frames()
+        self.assertEqual((frames[0].frame, frames[0].weight, frames[0].share), ("main", 30, 1.0))
+        self.assertEqual((frames[1].frame, frames[1].weight), ("parse", 20))
+
+    def test_validates_inclusive_limit(self) -> None:
+        with self.assertRaises(ValueError):
+            parse_folded(["main 1"]).hottest_frames(0)
+
 
 if __name__ == "__main__":
     unittest.main()
