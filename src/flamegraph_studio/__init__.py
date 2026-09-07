@@ -1,6 +1,5 @@
 """Folded stack analysis."""
 
-from .folded import FoldedStacks, parse_folded
+from .folded import FoldedStacks, StackDelta, diff_folded, parse_folded
 
-__all__ = ["FoldedStacks", "parse_folded"]
-
+__all__ = ["FoldedStacks", "StackDelta", "diff_folded", "parse_folded"]

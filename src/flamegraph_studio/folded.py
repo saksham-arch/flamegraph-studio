@@ -10,6 +10,14 @@ class HotFrame:
 
 
 @dataclass(frozen=True)
+class StackDelta:
+    stack: tuple[str, ...]
+    baseline_weight: int
+    candidate_weight: int
+    weight_delta: int
+
+
+@dataclass(frozen=True)
 class FoldedStacks:
     stacks: dict[tuple[str, ...], int]
 
@@ -58,3 +66,17 @@ def parse_folded(lines: Iterable[str]) -> FoldedStacks:
     if not stacks:
         raise ValueError("at least one folded stack is required")
     return FoldedStacks(stacks)
+
+
+def diff_folded(
+    baseline: FoldedStacks, candidate: FoldedStacks, limit: int = 20
+) -> list[StackDelta]:
+    if limit < 1:
+        raise ValueError("limit must be positive")
+    deltas: list[StackDelta] = []
+    for stack in baseline.stacks.keys() | candidate.stacks.keys():
+        before = baseline.stacks.get(stack, 0)
+        after = candidate.stacks.get(stack, 0)
+        if before != after:
+            deltas.append(StackDelta(stack, before, after, after - before))
+    return sorted(deltas, key=lambda item: (-abs(item.weight_delta), item.stack))[:limit]

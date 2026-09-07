@@ -1,6 +1,6 @@
 import unittest
 
-from flamegraph_studio import parse_folded
+from flamegraph_studio import diff_folded, parse_folded
 
 
 class FoldedStackTests(unittest.TestCase):
@@ -32,6 +32,20 @@ class FoldedStackTests(unittest.TestCase):
     def test_validates_inclusive_limit(self) -> None:
         with self.assertRaises(ValueError):
             parse_folded(["main 1"]).hottest_frames(0)
+
+    def test_diffs_folded_stack_weights(self) -> None:
+        baseline = parse_folded(["main;parse 10", "main;render 5"])
+        candidate = parse_folded(["main;parse 14", "main;write 8"])
+        deltas = diff_folded(baseline, candidate)
+        self.assertEqual(
+            [(item.stack, item.weight_delta) for item in deltas],
+            [(('main', 'write'), 8), (('main', 'render'), -5), (('main', 'parse'), 4)],
+        )
+
+    def test_validates_diff_limit(self) -> None:
+        stacks = parse_folded(["main 1"])
+        with self.assertRaises(ValueError):
+            diff_folded(stacks, stacks, 0)
 
 
 if __name__ == "__main__":

@@ -3,22 +3,34 @@ from dataclasses import asdict
 import json
 from pathlib import Path
 
-from .folded import parse_folded
+from .folded import diff_folded, parse_folded
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Inspect folded stack data")
     parser.add_argument("path", type=Path)
     parser.add_argument("--top", type=int, default=10)
+    parser.add_argument("--compare", type=Path, help="candidate folded stacks")
     args = parser.parse_args()
     with args.path.open(encoding="utf-8") as source:
         stacks = parse_folded(source)
-    payload = {
-        "stack_count": len(stacks.stacks),
-        "total_weight": stacks.total_weight,
-        "hottest_leaves": [asdict(item) for item in stacks.hottest_leaves(args.top)],
-        "hottest_frames": [asdict(item) for item in stacks.hottest_frames(args.top)],
-    }
+    if args.compare is not None:
+        with args.compare.open(encoding="utf-8") as source:
+            candidate = parse_folded(source)
+        payload = {
+            "baseline_total_weight": stacks.total_weight,
+            "candidate_total_weight": candidate.total_weight,
+            "largest_stack_changes": [
+                asdict(item) for item in diff_folded(stacks, candidate, args.top)
+            ],
+        }
+    else:
+        payload = {
+            "stack_count": len(stacks.stacks),
+            "total_weight": stacks.total_weight,
+            "hottest_leaves": [asdict(item) for item in stacks.hottest_leaves(args.top)],
+            "hottest_frames": [asdict(item) for item in stacks.hottest_frames(args.top)],
+        }
     print(json.dumps(payload, indent=2))
 
 
