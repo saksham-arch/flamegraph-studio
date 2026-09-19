@@ -1,6 +1,6 @@
 import unittest
 
-from flamegraph_studio import diff_folded, parse_folded
+from flamegraph_studio import diff_folded, diff_stack_shares, parse_folded
 
 
 class FoldedStackTests(unittest.TestCase):
@@ -46,6 +46,33 @@ class FoldedStackTests(unittest.TestCase):
         stacks = parse_folded(["main 1"])
         with self.assertRaises(ValueError):
             diff_folded(stacks, stacks, 0)
+
+    def test_diffs_normalized_stack_shares_across_unequal_captures(self) -> None:
+        baseline = parse_folded(["main;parse 60", "main;render 40"])
+        candidate = parse_folded(
+            ["main;parse 90", "main;render 10", "main;write 100"]
+        )
+
+        deltas = diff_stack_shares(baseline, candidate)
+
+        self.assertEqual([item.stack for item in deltas], [
+            ("main", "write"),
+            ("main", "render"),
+            ("main", "parse"),
+        ])
+        self.assertAlmostEqual(deltas[0].share_delta, 0.5)
+        self.assertAlmostEqual(deltas[1].share_delta, -0.35)
+        self.assertAlmostEqual(deltas[2].share_delta, -0.15)
+
+    def test_omits_unchanged_shares_when_capture_sizes_differ(self) -> None:
+        baseline = parse_folded(["main;parse 3", "main;render 1"])
+        candidate = parse_folded(["main;parse 6", "main;render 2"])
+        self.assertEqual(diff_stack_shares(baseline, candidate), [])
+
+    def test_validates_share_diff_limit(self) -> None:
+        stacks = parse_folded(["main 1"])
+        with self.assertRaises(ValueError):
+            diff_stack_shares(stacks, stacks, 0)
 
 
 if __name__ == "__main__":

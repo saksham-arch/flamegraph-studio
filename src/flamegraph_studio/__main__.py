@@ -3,7 +3,7 @@ from dataclasses import asdict
 import json
 from pathlib import Path
 
-from .folded import diff_folded, parse_folded
+from .folded import diff_folded, diff_stack_shares, parse_folded
 
 
 def main() -> None:
@@ -22,6 +22,10 @@ def main() -> None:
             "candidate_total_weight": candidate.total_weight,
             "largest_stack_changes": [
                 asdict(item) for item in diff_folded(stacks, candidate, args.top)
+            ],
+            "largest_stack_share_changes": [
+                asdict(item)
+                for item in diff_stack_shares(stacks, candidate, args.top)
             ],
         }
     else:

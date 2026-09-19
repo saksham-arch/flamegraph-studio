@@ -18,6 +18,14 @@ class StackDelta:
 
 
 @dataclass(frozen=True)
+class StackShareDelta:
+    stack: tuple[str, ...]
+    baseline_share: float
+    candidate_share: float
+    share_delta: float
+
+
+@dataclass(frozen=True)
 class FoldedStacks:
     stacks: dict[tuple[str, ...], int]
 
@@ -80,3 +88,21 @@ def diff_folded(
         if before != after:
             deltas.append(StackDelta(stack, before, after, after - before))
     return sorted(deltas, key=lambda item: (-abs(item.weight_delta), item.stack))[:limit]
+
+
+def diff_stack_shares(
+    baseline: FoldedStacks, candidate: FoldedStacks, limit: int = 20
+) -> list[StackShareDelta]:
+    """Rank stack share changes after normalizing each capture by its total."""
+    if limit < 1:
+        raise ValueError("limit must be positive")
+    deltas: list[StackShareDelta] = []
+    for stack in baseline.stacks.keys() | candidate.stacks.keys():
+        before_weight = baseline.stacks.get(stack, 0)
+        after_weight = candidate.stacks.get(stack, 0)
+        if before_weight * candidate.total_weight == after_weight * baseline.total_weight:
+            continue
+        before = before_weight / baseline.total_weight
+        after = after_weight / candidate.total_weight
+        deltas.append(StackShareDelta(stack, before, after, after - before))
+    return sorted(deltas, key=lambda item: (-abs(item.share_delta), item.stack))[:limit]

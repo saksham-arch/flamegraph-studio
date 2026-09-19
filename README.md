@@ -22,5 +22,6 @@ Weights retain the profiler's original unit (samples, events, or time). The
 tool reports proportions only after aggregating the supplied data.
 
 Comparison mode ranks stack-weight changes by absolute magnitude. Because
-profiler totals can differ between captures, it reports both totals and avoids
-presenting raw deltas as normalized performance changes.
+profiler totals can differ between captures, it also ranks changes in each
+stack's share of its capture. Share deltas reveal composition changes, but do
+not prove that absolute execution time improved or regressed.
