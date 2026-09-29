@@ -10,6 +10,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Inspect folded stack data")
     parser.add_argument("path", type=Path)
     parser.add_argument("--top", type=int, default=10)
+    parser.add_argument(
+        "--path-depth", type=int, default=2, help="depth for hot call-path prefixes"
+    )
     parser.add_argument("--compare", type=Path, help="candidate folded stacks")
     args = parser.parse_args()
     with args.path.open(encoding="utf-8") as source:
@@ -34,6 +37,10 @@ def main() -> None:
             "total_weight": stacks.total_weight,
             "hottest_leaves": [asdict(item) for item in stacks.hottest_leaves(args.top)],
             "hottest_frames": [asdict(item) for item in stacks.hottest_frames(args.top)],
+            "hottest_call_paths": [
+                asdict(item)
+                for item in stacks.hottest_call_paths(args.path_depth, args.top)
+            ],
         }
     print(json.dumps(payload, indent=2))
 

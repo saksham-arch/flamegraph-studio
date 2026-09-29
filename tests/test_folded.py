@@ -33,6 +33,31 @@ class FoldedStackTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             parse_folded(["main 1"]).hottest_frames(0)
 
+    def test_aggregates_hot_call_path_prefixes(self) -> None:
+        result = parse_folded(
+            [
+                "main;parse;tokenize 17",
+                "main;parse;validate 3",
+                "main;render;paint 10",
+                "cleanup 2",
+            ]
+        )
+
+        paths = result.hottest_call_paths(depth=2)
+
+        self.assertEqual(
+            [(item.path, item.weight) for item in paths],
+            [(("main", "parse"), 20), (("main", "render"), 10), (("cleanup",), 2)],
+        )
+        self.assertAlmostEqual(paths[0].share, 20 / 32)
+
+    def test_validates_call_path_options(self) -> None:
+        result = parse_folded(["main 1"])
+        with self.assertRaises(ValueError):
+            result.hottest_call_paths(0)
+        with self.assertRaises(ValueError):
+            result.hottest_call_paths(1, limit=0)
+
     def test_diffs_folded_stack_weights(self) -> None:
         baseline = parse_folded(["main;parse 10", "main;render 5"])
         candidate = parse_folded(["main;parse 14", "main;write 8"])

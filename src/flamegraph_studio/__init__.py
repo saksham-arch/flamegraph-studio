@@ -2,6 +2,7 @@
 
 from .folded import (
     FoldedStacks,
+    HotPath,
     StackDelta,
     StackShareDelta,
     diff_folded,
@@ -11,6 +12,7 @@ from .folded import (
 
 __all__ = [
     "FoldedStacks",
+    "HotPath",
     "StackDelta",
     "StackShareDelta",
     "diff_folded",

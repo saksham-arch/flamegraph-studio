@@ -10,6 +10,13 @@ class HotFrame:
 
 
 @dataclass(frozen=True)
+class HotPath:
+    path: tuple[str, ...]
+    weight: int
+    share: float
+
+
+@dataclass(frozen=True)
 class StackDelta:
     stack: tuple[str, ...]
     baseline_weight: int
@@ -54,6 +61,20 @@ class FoldedStacks:
         total = self.total_weight
         ranked = sorted(inclusive.items(), key=lambda item: (-item[1], item[0]))
         return [HotFrame(frame, weight, weight / total) for frame, weight in ranked[:limit]]
+
+    def hottest_call_paths(self, depth: int, limit: int = 10) -> list[HotPath]:
+        """Rank call-path prefixes, retaining shorter stacks as complete paths."""
+        if depth < 1:
+            raise ValueError("depth must be positive")
+        if limit < 1:
+            raise ValueError("limit must be positive")
+        prefixes: dict[tuple[str, ...], int] = {}
+        for stack, weight in self.stacks.items():
+            path = stack[:depth]
+            prefixes[path] = prefixes.get(path, 0) + weight
+        total = self.total_weight
+        ranked = sorted(prefixes.items(), key=lambda item: (-item[1], item[0]))
+        return [HotPath(path, weight, weight / total) for path, weight in ranked[:limit]]
 
 
 def parse_folded(lines: Iterable[str]) -> FoldedStacks:
