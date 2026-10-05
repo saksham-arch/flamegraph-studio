@@ -1,6 +1,11 @@
 import unittest
 
-from flamegraph_studio import diff_folded, diff_stack_shares, parse_folded
+from flamegraph_studio import (
+    diff_folded,
+    diff_frame_shares,
+    diff_stack_shares,
+    parse_folded,
+)
 
 
 class FoldedStackTests(unittest.TestCase):
@@ -98,6 +103,36 @@ class FoldedStackTests(unittest.TestCase):
         stacks = parse_folded(["main 1"])
         with self.assertRaises(ValueError):
             diff_stack_shares(stacks, stacks, 0)
+
+    def test_diffs_inclusive_frame_shares_across_stack_shapes(self) -> None:
+        baseline = parse_folded(
+            ["main;parse;tokenize 60", "main;render 40"]
+        )
+        candidate = parse_folded(
+            [
+                "main;parse;validate 20",
+                "main;render 80",
+                "worker;parse;tokenize 100",
+            ]
+        )
+
+        deltas = diff_frame_shares(baseline, candidate)
+        by_frame = {item.frame: item for item in deltas}
+
+        self.assertNotIn("parse", by_frame)
+        self.assertAlmostEqual(by_frame["main"].share_delta, -0.5)
+        self.assertAlmostEqual(by_frame["worker"].share_delta, 0.5)
+        self.assertAlmostEqual(by_frame["tokenize"].share_delta, -0.1)
+
+    def test_frame_share_diff_counts_recursion_once_per_stack(self) -> None:
+        baseline = parse_folded(["main;parse;parse 10"])
+        candidate = parse_folded(["main;parse 20"])
+        self.assertEqual(diff_frame_shares(baseline, candidate), [])
+
+    def test_validates_frame_share_diff_limit(self) -> None:
+        stacks = parse_folded(["main 1"])
+        with self.assertRaises(ValueError):
+            diff_frame_shares(stacks, stacks, 0)
 
 
 if __name__ == "__main__":

@@ -33,6 +33,14 @@ class StackShareDelta:
 
 
 @dataclass(frozen=True)
+class FrameShareDelta:
+    frame: str
+    baseline_share: float
+    candidate_share: float
+    share_delta: float
+
+
+@dataclass(frozen=True)
 class FoldedStacks:
     stacks: dict[tuple[str, ...], int]
 
@@ -54,10 +62,7 @@ class FoldedStacks:
         """Rank frames by inclusive weight, counting a recursive frame once per stack."""
         if limit < 1:
             raise ValueError("limit must be positive")
-        inclusive: dict[str, int] = {}
-        for stack, weight in self.stacks.items():
-            for frame in set(stack):
-                inclusive[frame] = inclusive.get(frame, 0) + weight
+        inclusive = _inclusive_frame_weights(self)
         total = self.total_weight
         ranked = sorted(inclusive.items(), key=lambda item: (-item[1], item[0]))
         return [HotFrame(frame, weight, weight / total) for frame, weight in ranked[:limit]]
@@ -75,6 +80,14 @@ class FoldedStacks:
         total = self.total_weight
         ranked = sorted(prefixes.items(), key=lambda item: (-item[1], item[0]))
         return [HotPath(path, weight, weight / total) for path, weight in ranked[:limit]]
+
+
+def _inclusive_frame_weights(stacks: FoldedStacks) -> dict[str, int]:
+    weights: dict[str, int] = {}
+    for stack, weight in stacks.stacks.items():
+        for frame in set(stack):
+            weights[frame] = weights.get(frame, 0) + weight
+    return weights
 
 
 def parse_folded(lines: Iterable[str]) -> FoldedStacks:
@@ -121,9 +134,32 @@ def diff_stack_shares(
     for stack in baseline.stacks.keys() | candidate.stacks.keys():
         before_weight = baseline.stacks.get(stack, 0)
         after_weight = candidate.stacks.get(stack, 0)
-        if before_weight * candidate.total_weight == after_weight * baseline.total_weight:
+        if (
+            before_weight * candidate.total_weight
+            == after_weight * baseline.total_weight
+        ):
             continue
         before = before_weight / baseline.total_weight
         after = after_weight / candidate.total_weight
         deltas.append(StackShareDelta(stack, before, after, after - before))
     return sorted(deltas, key=lambda item: (-abs(item.share_delta), item.stack))[:limit]
+
+
+def diff_frame_shares(
+    baseline: FoldedStacks, candidate: FoldedStacks, limit: int = 20
+) -> list[FrameShareDelta]:
+    """Rank inclusive frame-share changes across normalized captures."""
+    if limit < 1:
+        raise ValueError("limit must be positive")
+    baseline_weights = _inclusive_frame_weights(baseline)
+    candidate_weights = _inclusive_frame_weights(candidate)
+    deltas: list[FrameShareDelta] = []
+    for frame in baseline_weights.keys() | candidate_weights.keys():
+        before_weight = baseline_weights.get(frame, 0)
+        after_weight = candidate_weights.get(frame, 0)
+        if before_weight * candidate.total_weight == after_weight * baseline.total_weight:
+            continue
+        before = before_weight / baseline.total_weight
+        after = after_weight / candidate.total_weight
+        deltas.append(FrameShareDelta(frame, before, after, after - before))
+    return sorted(deltas, key=lambda item: (-abs(item.share_delta), item.frame))[:limit]

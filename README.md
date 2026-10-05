@@ -26,4 +26,7 @@ shorter than that depth remains a complete path rather than being discarded.
 Comparison mode ranks stack-weight changes by absolute magnitude. Because
 profiler totals can differ between captures, it also ranks changes in each
 stack's share of its capture. Share deltas reveal composition changes, but do
-not prove that absolute execution time improved or regressed.
+not prove that absolute execution time improved or regressed. Comparison mode
+also aggregates inclusive frame shares across stack shapes, counting recursive
+frames once per sampled stack. This can reveal a shifting subsystem even when
+its work is split across several exact stacks.
