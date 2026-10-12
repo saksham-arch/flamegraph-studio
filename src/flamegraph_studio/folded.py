@@ -41,6 +41,14 @@ class FrameShareDelta:
 
 
 @dataclass(frozen=True)
+class PathShareDelta:
+    path: tuple[str, ...]
+    baseline_share: float
+    candidate_share: float
+    share_delta: float
+
+
+@dataclass(frozen=True)
 class FoldedStacks:
     stacks: dict[tuple[str, ...], int]
 
@@ -73,10 +81,7 @@ class FoldedStacks:
             raise ValueError("depth must be positive")
         if limit < 1:
             raise ValueError("limit must be positive")
-        prefixes: dict[tuple[str, ...], int] = {}
-        for stack, weight in self.stacks.items():
-            path = stack[:depth]
-            prefixes[path] = prefixes.get(path, 0) + weight
+        prefixes = _call_path_weights(self, depth)
         total = self.total_weight
         ranked = sorted(prefixes.items(), key=lambda item: (-item[1], item[0]))
         return [HotPath(path, weight, weight / total) for path, weight in ranked[:limit]]
@@ -87,6 +92,16 @@ def _inclusive_frame_weights(stacks: FoldedStacks) -> dict[str, int]:
     for stack, weight in stacks.stacks.items():
         for frame in set(stack):
             weights[frame] = weights.get(frame, 0) + weight
+    return weights
+
+
+def _call_path_weights(
+    stacks: FoldedStacks, depth: int
+) -> dict[tuple[str, ...], int]:
+    weights: dict[tuple[str, ...], int] = {}
+    for stack, weight in stacks.stacks.items():
+        path = stack[:depth]
+        weights[path] = weights.get(path, 0) + weight
     return weights
 
 
@@ -157,9 +172,37 @@ def diff_frame_shares(
     for frame in baseline_weights.keys() | candidate_weights.keys():
         before_weight = baseline_weights.get(frame, 0)
         after_weight = candidate_weights.get(frame, 0)
-        if before_weight * candidate.total_weight == after_weight * baseline.total_weight:
+        if (
+            before_weight * candidate.total_weight
+            == after_weight * baseline.total_weight
+        ):
             continue
         before = before_weight / baseline.total_weight
         after = after_weight / candidate.total_weight
         deltas.append(FrameShareDelta(frame, before, after, after - before))
     return sorted(deltas, key=lambda item: (-abs(item.share_delta), item.frame))[:limit]
+
+
+def diff_call_path_shares(
+    baseline: FoldedStacks,
+    candidate: FoldedStacks,
+    depth: int,
+    limit: int = 20,
+) -> list[PathShareDelta]:
+    """Rank normalized call-path-prefix share changes across captures."""
+    if depth < 1:
+        raise ValueError("depth must be positive")
+    if limit < 1:
+        raise ValueError("limit must be positive")
+    baseline_weights = _call_path_weights(baseline, depth)
+    candidate_weights = _call_path_weights(candidate, depth)
+    deltas: list[PathShareDelta] = []
+    for path in baseline_weights.keys() | candidate_weights.keys():
+        before_weight = baseline_weights.get(path, 0)
+        after_weight = candidate_weights.get(path, 0)
+        if before_weight * candidate.total_weight == after_weight * baseline.total_weight:
+            continue
+        before = before_weight / baseline.total_weight
+        after = after_weight / candidate.total_weight
+        deltas.append(PathShareDelta(path, before, after, after - before))
+    return sorted(deltas, key=lambda item: (-abs(item.share_delta), item.path))[:limit]

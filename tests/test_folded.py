@@ -1,6 +1,7 @@
 import unittest
 
 from flamegraph_studio import (
+    diff_call_path_shares,
     diff_folded,
     diff_frame_shares,
     diff_stack_shares,
@@ -133,6 +134,28 @@ class FoldedStackTests(unittest.TestCase):
         stacks = parse_folded(["main 1"])
         with self.assertRaises(ValueError):
             diff_frame_shares(stacks, stacks, 0)
+
+    def test_diffs_normalized_call_path_prefix_shares(self) -> None:
+        baseline = parse_folded(
+            ["main;parse;tokenize 60", "main;render 40"]
+        )
+        candidate = parse_folded(
+            ["main;parse;validate 20", "main;render 80", "worker;sync 100"]
+        )
+
+        deltas = diff_call_path_shares(baseline, candidate, depth=2)
+        by_path = {item.path: item for item in deltas}
+
+        self.assertAlmostEqual(by_path[("worker", "sync")].share_delta, 0.5)
+        self.assertAlmostEqual(by_path[("main", "parse")].share_delta, -0.5)
+        self.assertNotIn(("main", "render"), by_path)
+
+    def test_validates_call_path_share_diff_options(self) -> None:
+        stacks = parse_folded(["main 1"])
+        with self.assertRaises(ValueError):
+            diff_call_path_shares(stacks, stacks, depth=0)
+        with self.assertRaises(ValueError):
+            diff_call_path_shares(stacks, stacks, depth=1, limit=0)
 
 
 if __name__ == "__main__":

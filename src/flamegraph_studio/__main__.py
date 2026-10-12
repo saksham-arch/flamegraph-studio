@@ -3,7 +3,13 @@ from dataclasses import asdict
 import json
 from pathlib import Path
 
-from .folded import diff_folded, diff_frame_shares, diff_stack_shares, parse_folded
+from .folded import (
+    diff_call_path_shares,
+    diff_folded,
+    diff_frame_shares,
+    diff_stack_shares,
+    parse_folded,
+)
 
 
 def main() -> None:
@@ -33,6 +39,15 @@ def main() -> None:
             "largest_frame_share_changes": [
                 asdict(item)
                 for item in diff_frame_shares(stacks, candidate, args.top)
+            ],
+            "largest_call_path_share_changes": [
+                asdict(item)
+                for item in diff_call_path_shares(
+                    stacks,
+                    candidate,
+                    args.path_depth,
+                    args.top,
+                )
             ],
         }
     else:
