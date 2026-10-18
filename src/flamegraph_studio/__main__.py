@@ -7,6 +7,7 @@ from .folded import (
     diff_call_path_shares,
     diff_folded,
     diff_frame_shares,
+    diff_leaf_shares,
     diff_stack_shares,
     parse_folded,
 )
@@ -39,6 +40,10 @@ def main() -> None:
             "largest_frame_share_changes": [
                 asdict(item)
                 for item in diff_frame_shares(stacks, candidate, args.top)
+            ],
+            "largest_leaf_share_changes": [
+                asdict(item)
+                for item in diff_leaf_shares(stacks, candidate, args.top)
             ],
             "largest_call_path_share_changes": [
                 asdict(item)

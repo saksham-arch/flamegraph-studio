@@ -4,6 +4,7 @@ from flamegraph_studio import (
     diff_call_path_shares,
     diff_folded,
     diff_frame_shares,
+    diff_leaf_shares,
     diff_stack_shares,
     parse_folded,
 )
@@ -134,6 +135,22 @@ class FoldedStackTests(unittest.TestCase):
         stacks = parse_folded(["main 1"])
         with self.assertRaises(ValueError):
             diff_frame_shares(stacks, stacks, 0)
+
+    def test_diffs_leaf_shares_without_counting_callers(self) -> None:
+        baseline = parse_folded(["main;parse 60", "main;render 40"])
+        candidate = parse_folded(["main;parse 20", "main;render 80"])
+
+        deltas = diff_leaf_shares(baseline, candidate)
+        by_frame = {item.frame: item for item in deltas}
+
+        self.assertAlmostEqual(by_frame["parse"].share_delta, -0.4)
+        self.assertAlmostEqual(by_frame["render"].share_delta, 0.4)
+        self.assertNotIn("main", by_frame)
+
+    def test_validates_leaf_share_diff_limit(self) -> None:
+        stacks = parse_folded(["main 1"])
+        with self.assertRaises(ValueError):
+            diff_leaf_shares(stacks, stacks, 0)
 
     def test_diffs_normalized_call_path_prefix_shares(self) -> None:
         baseline = parse_folded(

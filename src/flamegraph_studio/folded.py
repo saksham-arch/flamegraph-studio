@@ -41,6 +41,14 @@ class FrameShareDelta:
 
 
 @dataclass(frozen=True)
+class LeafShareDelta:
+    frame: str
+    baseline_share: float
+    candidate_share: float
+    share_delta: float
+
+
+@dataclass(frozen=True)
 class PathShareDelta:
     path: tuple[str, ...]
     baseline_share: float
@@ -59,9 +67,7 @@ class FoldedStacks:
     def hottest_leaves(self, limit: int = 10) -> list[HotFrame]:
         if limit < 1:
             raise ValueError("limit must be positive")
-        leaves: dict[str, int] = {}
-        for stack, weight in self.stacks.items():
-            leaves[stack[-1]] = leaves.get(stack[-1], 0) + weight
+        leaves = _leaf_frame_weights(self)
         total = self.total_weight
         ranked = sorted(leaves.items(), key=lambda item: (-item[1], item[0]))
         return [HotFrame(frame, weight, weight / total) for frame, weight in ranked[:limit]]
@@ -85,6 +91,14 @@ class FoldedStacks:
         total = self.total_weight
         ranked = sorted(prefixes.items(), key=lambda item: (-item[1], item[0]))
         return [HotPath(path, weight, weight / total) for path, weight in ranked[:limit]]
+
+
+def _leaf_frame_weights(stacks: FoldedStacks) -> dict[str, int]:
+    weights: dict[str, int] = {}
+    for stack, weight in stacks.stacks.items():
+        frame = stack[-1]
+        weights[frame] = weights.get(frame, 0) + weight
+    return weights
 
 
 def _inclusive_frame_weights(stacks: FoldedStacks) -> dict[str, int]:
@@ -180,6 +194,29 @@ def diff_frame_shares(
         before = before_weight / baseline.total_weight
         after = after_weight / candidate.total_weight
         deltas.append(FrameShareDelta(frame, before, after, after - before))
+    return sorted(deltas, key=lambda item: (-abs(item.share_delta), item.frame))[:limit]
+
+
+def diff_leaf_shares(
+    baseline: FoldedStacks, candidate: FoldedStacks, limit: int = 20
+) -> list[LeafShareDelta]:
+    """Rank leaf-frame share changes across normalized captures."""
+    if limit < 1:
+        raise ValueError("limit must be positive")
+    baseline_weights = _leaf_frame_weights(baseline)
+    candidate_weights = _leaf_frame_weights(candidate)
+    deltas: list[LeafShareDelta] = []
+    for frame in baseline_weights.keys() | candidate_weights.keys():
+        before_weight = baseline_weights.get(frame, 0)
+        after_weight = candidate_weights.get(frame, 0)
+        if (
+            before_weight * candidate.total_weight
+            == after_weight * baseline.total_weight
+        ):
+            continue
+        before = before_weight / baseline.total_weight
+        after = after_weight / candidate.total_weight
+        deltas.append(LeafShareDelta(frame, before, after, after - before))
     return sorted(deltas, key=lambda item: (-abs(item.share_delta), item.frame))[:limit]
 
 
