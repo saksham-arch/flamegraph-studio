@@ -21,6 +21,18 @@ class FoldedStackTests(unittest.TestCase):
         self.assertEqual((hottest[0].frame, hottest[0].weight), ("tokenize", 20))
         self.assertAlmostEqual(hottest[0].share, 2 / 3)
 
+    def test_summarizes_stack_depth_by_sample_weight(self) -> None:
+        result = parse_folded(
+            ["main;parse;tokenize 20", "main;render 10", "cleanup 2"]
+        )
+
+        summary = result.depth_summary()
+
+        self.assertEqual(summary.minimum_depth, 1)
+        self.assertEqual(summary.weighted_median_depth, 3)
+        self.assertEqual(summary.weighted_mean_depth, 82 / 32)
+        self.assertEqual(summary.maximum_depth, 3)
+
     def test_rejects_empty_or_invalid_input(self) -> None:
         for lines in ([], ["main;work 0"], ["not-folded"]):
             with self.subTest(lines=lines), self.assertRaises(ValueError):

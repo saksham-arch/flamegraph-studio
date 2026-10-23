@@ -15,13 +15,18 @@ main;render 10
 ```bash
 PYTHONPATH=src python3 -m flamegraph_studio stacks.folded --top 10 --path-depth 2
 PYTHONPATH=src python3 -m flamegraph_studio before.folded --compare after.folded
-python3 -m unittest discover -s tests
+PYTHONPATH=src python3 -m unittest discover -s tests
 ```
 
 Weights retain the profiler's original unit (samples, events, or time). The
 tool reports proportions only after aggregating the supplied data.
 Call-path prefixes group samples by their first `--path-depth` frames. A stack
 shorter than that depth remains a complete path rather than being discarded.
+Single-capture output also summarizes minimum, weighted median, weighted mean,
+and maximum stack depth. Each stack shape is weighted by its supplied sample
+weight, so frequently observed paths influence the center more than rare paths.
+Depth depends on profiler unwinding, inlining, truncation, and runtime frames;
+it describes the capture rather than intrinsic code complexity.
 
 Comparison mode ranks stack-weight changes by absolute magnitude. Because
 profiler totals can differ between captures, it also ranks changes in each

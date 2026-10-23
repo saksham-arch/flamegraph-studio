@@ -59,6 +59,7 @@ def main() -> None:
         payload = {
             "stack_count": len(stacks.stacks),
             "total_weight": stacks.total_weight,
+            "stack_depth": asdict(stacks.depth_summary()),
             "hottest_leaves": [asdict(item) for item in stacks.hottest_leaves(args.top)],
             "hottest_frames": [asdict(item) for item in stacks.hottest_frames(args.top)],
             "hottest_call_paths": [

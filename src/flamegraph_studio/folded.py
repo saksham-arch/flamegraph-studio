@@ -17,6 +17,14 @@ class HotPath:
 
 
 @dataclass(frozen=True)
+class StackDepthSummary:
+    minimum_depth: int
+    weighted_median_depth: int
+    weighted_mean_depth: float
+    maximum_depth: int
+
+
+@dataclass(frozen=True)
 class StackDelta:
     stack: tuple[str, ...]
     baseline_weight: int
@@ -63,6 +71,30 @@ class FoldedStacks:
     @property
     def total_weight(self) -> int:
         return sum(self.stacks.values())
+
+    def depth_summary(self) -> StackDepthSummary:
+        """Summarize stack depth while weighting each shape by its samples."""
+        weights_by_depth: dict[int, int] = {}
+        for stack, weight in self.stacks.items():
+            depth = len(stack)
+            weights_by_depth[depth] = weights_by_depth.get(depth, 0) + weight
+        cumulative_weight = 0
+        median_target = (self.total_weight + 1) // 2
+        weighted_median_depth = 0
+        for depth, weight in sorted(weights_by_depth.items()):
+            cumulative_weight += weight
+            if cumulative_weight >= median_target:
+                weighted_median_depth = depth
+                break
+        return StackDepthSummary(
+            minimum_depth=min(weights_by_depth),
+            weighted_median_depth=weighted_median_depth,
+            weighted_mean_depth=(
+                sum(depth * weight for depth, weight in weights_by_depth.items())
+                / self.total_weight
+            ),
+            maximum_depth=max(weights_by_depth),
+        )
 
     def hottest_leaves(self, limit: int = 10) -> list[HotFrame]:
         if limit < 1:
