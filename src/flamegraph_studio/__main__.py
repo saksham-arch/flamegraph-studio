@@ -27,9 +27,17 @@ def main() -> None:
     if args.compare is not None:
         with args.compare.open(encoding="utf-8") as source:
             candidate = parse_folded(source)
+        baseline_depth = stacks.depth_summary()
+        candidate_depth = candidate.depth_summary()
         payload = {
             "baseline_total_weight": stacks.total_weight,
             "candidate_total_weight": candidate.total_weight,
+            "baseline_stack_depth": asdict(baseline_depth),
+            "candidate_stack_depth": asdict(candidate_depth),
+            "weighted_mean_depth_change": (
+                candidate_depth.weighted_mean_depth
+                - baseline_depth.weighted_mean_depth
+            ),
             "largest_stack_changes": [
                 asdict(item) for item in diff_folded(stacks, candidate, args.top)
             ],

@@ -1,4 +1,12 @@
+from contextlib import redirect_stdout
+from io import StringIO
+import json
+from pathlib import Path
+from tempfile import TemporaryDirectory
 import unittest
+from unittest.mock import patch
+
+from flamegraph_studio.__main__ import main
 
 from flamegraph_studio import (
     diff_call_path_shares,
@@ -11,6 +19,21 @@ from flamegraph_studio import (
 
 
 class FoldedStackTests(unittest.TestCase):
+    def test_compare_output_reports_stack_depth_change(self) -> None:
+        with TemporaryDirectory() as directory:
+            baseline = Path(directory) / "baseline.folded"
+            candidate = Path(directory) / "candidate.folded"
+            baseline.write_text("main;work 2\n", encoding="utf-8")
+            candidate.write_text("main;parse;work 2\n", encoding="utf-8")
+            output = StringIO()
+            with patch("sys.argv", ["flamegraph-studio", str(baseline), "--compare", str(candidate)]):
+                with redirect_stdout(output):
+                    main()
+        payload = json.loads(output.getvalue())
+        self.assertEqual(payload["baseline_stack_depth"]["weighted_mean_depth"], 2)
+        self.assertEqual(payload["candidate_stack_depth"]["weighted_mean_depth"], 3)
+        self.assertEqual(payload["weighted_mean_depth_change"], 1)
+
     def test_merges_duplicates_and_ranks_leaves(self) -> None:
         result = parse_folded(
             ["main;parse;tokenize 17\n", "main;parse;tokenize 3\n", "main;render 10\n"]

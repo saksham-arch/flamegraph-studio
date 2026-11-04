@@ -32,7 +32,10 @@ Comparison mode ranks stack-weight changes by absolute magnitude. Because
 profiler totals can differ between captures, it also ranks changes in each
 stack's share of its capture. Share deltas reveal composition changes, but do
 not prove that absolute execution time improved or regressed. Comparison mode
-also aggregates inclusive frame shares across stack shapes, counting recursive
+reports the stack-depth summaries for both captures and the candidate minus
+baseline weighted-mean depth. A deeper captured stack can reflect a different
+workload or unwinding behavior rather than more application work. Comparison
+mode also aggregates inclusive frame shares across stack shapes, counting recursive
 frames once per sampled stack. This can reveal a shifting subsystem even when
 its work is split across several exact stacks. Leaf-frame share changes isolate
 where samples terminated without also counting callers; they do not measure a
