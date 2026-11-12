@@ -27,6 +27,10 @@ and maximum stack depth. Each stack shape is weighted by its supplied sample
 weight, so frequently observed paths influence the center more than rare paths.
 Depth depends on profiler unwinding, inlining, truncation, and runtime frames;
 it describes the capture rather than intrinsic code complexity.
+The `stack_depth_histogram` lists observed depths in ascending order, with the
+combined weight and share of each depth. It can reveal separate shallow and
+deep stack populations that one center statistic conceals. It uses the
+capture's sample weights, not a count of distinct stack shapes.
 
 Comparison mode ranks stack-weight changes by absolute magnitude. Because
 profiler totals can differ between captures, it also ranks changes in each

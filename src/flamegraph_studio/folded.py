@@ -25,6 +25,13 @@ class StackDepthSummary:
 
 
 @dataclass(frozen=True)
+class StackDepthBucket:
+    depth: int
+    weight: int
+    share: float
+
+
+@dataclass(frozen=True)
 class StackDelta:
     stack: tuple[str, ...]
     baseline_weight: int
@@ -72,28 +79,37 @@ class FoldedStacks:
     def total_weight(self) -> int:
         return sum(self.stacks.values())
 
-    def depth_summary(self) -> StackDepthSummary:
-        """Summarize stack depth while weighting each shape by its samples."""
+    def depth_histogram(self) -> list[StackDepthBucket]:
+        """Return observed depths with their combined sample weights."""
         weights_by_depth: dict[int, int] = {}
         for stack, weight in self.stacks.items():
             depth = len(stack)
             weights_by_depth[depth] = weights_by_depth.get(depth, 0) + weight
+        total = self.total_weight
+        return [
+            StackDepthBucket(depth, weight, weight / total)
+            for depth, weight in sorted(weights_by_depth.items())
+        ]
+
+    def depth_summary(self) -> StackDepthSummary:
+        """Summarize stack depth while weighting each shape by its samples."""
+        buckets = self.depth_histogram()
         cumulative_weight = 0
         median_target = (self.total_weight + 1) // 2
         weighted_median_depth = 0
-        for depth, weight in sorted(weights_by_depth.items()):
-            cumulative_weight += weight
+        for bucket in buckets:
+            cumulative_weight += bucket.weight
             if cumulative_weight >= median_target:
-                weighted_median_depth = depth
+                weighted_median_depth = bucket.depth
                 break
         return StackDepthSummary(
-            minimum_depth=min(weights_by_depth),
+            minimum_depth=buckets[0].depth,
             weighted_median_depth=weighted_median_depth,
             weighted_mean_depth=(
-                sum(depth * weight for depth, weight in weights_by_depth.items())
+                sum(bucket.depth * bucket.weight for bucket in buckets)
                 / self.total_weight
             ),
-            maximum_depth=max(weights_by_depth),
+            maximum_depth=buckets[-1].depth,
         )
 
     def hottest_leaves(self, limit: int = 10) -> list[HotFrame]:

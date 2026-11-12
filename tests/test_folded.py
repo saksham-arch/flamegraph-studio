@@ -56,6 +56,42 @@ class FoldedStackTests(unittest.TestCase):
         self.assertEqual(summary.weighted_mean_depth, 82 / 32)
         self.assertEqual(summary.maximum_depth, 3)
 
+    def test_depth_histogram_merges_shapes_and_uses_sample_weight(self) -> None:
+        result = parse_folded(
+            [
+                "main;parse;tokenize 17",
+                "main;parse;validate 3",
+                "main;render 10",
+                "cleanup 2",
+            ]
+        )
+
+        buckets = result.depth_histogram()
+
+        self.assertEqual(
+            [(item.depth, item.weight) for item in buckets],
+            [(1, 2), (2, 10), (3, 20)],
+        )
+        self.assertAlmostEqual(sum(item.share for item in buckets), 1.0)
+        self.assertAlmostEqual(buckets[-1].share, 20 / 32)
+
+    def test_single_capture_output_includes_depth_histogram(self) -> None:
+        with TemporaryDirectory() as directory:
+            capture = Path(directory) / "capture.folded"
+            capture.write_text("main;work 3\nmain;other 1\ncleanup 1\n", encoding="utf-8")
+            output = StringIO()
+            with patch("sys.argv", ["flamegraph-studio", str(capture)]):
+                with redirect_stdout(output):
+                    main()
+        payload = json.loads(output.getvalue())
+        self.assertEqual(
+            payload["stack_depth_histogram"],
+            [
+                {"depth": 1, "weight": 1, "share": 0.2},
+                {"depth": 2, "weight": 4, "share": 0.8},
+            ],
+        )
+
     def test_rejects_empty_or_invalid_input(self) -> None:
         for lines in ([], ["main;work 0"], ["not-folded"]):
             with self.subTest(lines=lines), self.assertRaises(ValueError):
