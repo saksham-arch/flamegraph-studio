@@ -32,6 +32,14 @@ class StackDepthBucket:
 
 
 @dataclass(frozen=True)
+class StackDepthDelta:
+    depth: int
+    baseline_share: float
+    candidate_share: float
+    share_delta: float
+
+
+@dataclass(frozen=True)
 class StackDelta:
     stack: tuple[str, ...]
     baseline_weight: int
@@ -199,6 +207,24 @@ def diff_folded(
         if before != after:
             deltas.append(StackDelta(stack, before, after, after - before))
     return sorted(deltas, key=lambda item: (-abs(item.weight_delta), item.stack))[:limit]
+
+
+def diff_depth_shares(
+    baseline: FoldedStacks, candidate: FoldedStacks
+) -> list[StackDepthDelta]:
+    """Compare the sample share at each observed stack depth."""
+    before = {bucket.depth: bucket.share for bucket in baseline.depth_histogram()}
+    after = {bucket.depth: bucket.share for bucket in candidate.depth_histogram()}
+    return [
+        StackDepthDelta(
+            depth,
+            before.get(depth, 0),
+            after.get(depth, 0),
+            after.get(depth, 0) - before.get(depth, 0),
+        )
+        for depth in sorted(before.keys() | after.keys())
+        if before.get(depth, 0) != after.get(depth, 0)
+    ]
 
 
 def diff_stack_shares(

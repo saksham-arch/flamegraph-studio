@@ -39,6 +39,9 @@ not prove that absolute execution time improved or regressed. Comparison mode
 reports the stack-depth summaries for both captures and the candidate minus
 baseline weighted-mean depth. A deeper captured stack can reflect a different
 workload or unwinding behavior rather than more application work. Comparison
+output also lists changes in sample share at each observed stack depth; this
+shows shifts between shallow and deep populations that a mean can conceal.
+It remains sensitive to profiler unwinding and workload differences. Comparison
 mode also aggregates inclusive frame shares across stack shapes, counting recursive
 frames once per sampled stack. This can reveal a shifting subsystem even when
 its work is split across several exact stacks. Leaf-frame share changes isolate

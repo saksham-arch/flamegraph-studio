@@ -10,6 +10,7 @@ from flamegraph_studio.__main__ import main
 
 from flamegraph_studio import (
     diff_call_path_shares,
+    diff_depth_shares,
     diff_folded,
     diff_frame_shares,
     diff_leaf_shares,
@@ -19,6 +20,16 @@ from flamegraph_studio import (
 
 
 class FoldedStackTests(unittest.TestCase):
+    def test_compares_depth_shares_with_unequal_capture_totals(self) -> None:
+        baseline = parse_folded(["root;work 3", "root;deep;work 1"])
+        candidate = parse_folded(["root;work 2", "root;deep;work 6"])
+
+        changes = diff_depth_shares(baseline, candidate)
+
+        self.assertEqual([item.depth for item in changes], [2, 3])
+        self.assertAlmostEqual(changes[0].share_delta, -0.5)
+        self.assertAlmostEqual(changes[1].share_delta, 0.5)
+
     def test_compare_output_reports_stack_depth_change(self) -> None:
         with TemporaryDirectory() as directory:
             baseline = Path(directory) / "baseline.folded"

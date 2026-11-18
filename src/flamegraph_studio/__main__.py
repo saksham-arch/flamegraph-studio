@@ -5,6 +5,7 @@ from pathlib import Path
 
 from .folded import (
     diff_call_path_shares,
+    diff_depth_shares,
     diff_folded,
     diff_frame_shares,
     diff_leaf_shares,
@@ -38,6 +39,9 @@ def main() -> None:
                 candidate_depth.weighted_mean_depth
                 - baseline_depth.weighted_mean_depth
             ),
+            "stack_depth_share_changes": [
+                asdict(item) for item in diff_depth_shares(stacks, candidate)
+            ],
             "largest_stack_changes": [
                 asdict(item) for item in diff_folded(stacks, candidate, args.top)
             ],
